@@ -1,6 +1,6 @@
 # INGInious-OIDC-auth
 
-INGInious-OIDC-auth is a plugin that adds Microsoft authentication to INGInious.
+INGInious-OIDC-auth is a plugin that adds OpenID Connect (OIDC) authentication support to INGIinious.
 
 - **Downloads page:** https://github.com/BergLucas/INGInious-OIDC-auth/releases
 
