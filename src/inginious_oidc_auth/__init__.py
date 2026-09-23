@@ -18,10 +18,38 @@ if TYPE_CHECKING:
 
 
 class OidcClient(BaseModel):
-    """Client configuration for the OIDC authentication plugin."""
+    """A OIDC client."""
 
     id: str
     secret: str
+
+
+class OidcProfile(BaseModel):
+    """A OIDC profile."""
+
+    id_key: str = "sub"
+    name_key: str = "name"
+    email_key: str = "email"
+
+
+class OidcProvider(BaseModel):
+    """A OIDC provider."""
+
+    name: str
+    client: OidcClient
+    oidc_config_url: str
+    icon_url: str
+    profile: OidcProfile = OidcProfile()
+    scope: list[str] = []
+
+
+class OidcPluginConfig(BaseModel):
+    """Configuration for the OIDC authentication plugin."""
+
+    debug: bool = False
+    static_path: str = ""
+    timeout: int = 5
+    providers: dict[str, OidcProvider] = {}
 
 
 class OidcEndpoints(BaseModel):
@@ -32,29 +60,6 @@ class OidcEndpoints(BaseModel):
     userinfo_url: str
 
 
-class OidcProfile(BaseModel):
-    """OIDC profile configuration."""
-
-    id_key: str = "sub"
-    name_key: str = "name"
-    email_key: str = "email"
-
-
-class OidcPluginConfig(BaseModel):
-    """Configuration for the OIDC authentication plugin."""
-
-    id: str = "oidc"
-    name: str = "OpenID Connect (OIDC)"
-    client: OidcClient
-    oidc_config_url: str
-    icon_url: str
-    static_path: str = ""
-    profile: OidcProfile = OidcProfile()
-    scope: list[str] = []
-    timeout: int = 5
-    debug: bool = False
-
-
 class OidcAuthMethod(AuthMethod):
     """OIDC authentication method."""
 
@@ -62,7 +67,7 @@ class OidcAuthMethod(AuthMethod):
     def _redirect_uri(self) -> str:
         return flask.request.url_root + "auth/callback/" + self._id
 
-    def get_auth_link(self, auth_storage: dict[str, Any]) -> str:
+    def get_auth_link(self, auth_storage: dict[str, Any]) -> str:  # noqa: D102
         session = OAuth2Session(
             self._client.id,
             scope=self._scope,
@@ -77,7 +82,7 @@ class OidcAuthMethod(AuthMethod):
 
         return authorization_url
 
-    def callback(
+    def callback(  # noqa: D102
         self, auth_storage: dict[str, Any]
     ) -> tuple[str, str, str, dict] | None:
         session = OAuth2Session(
@@ -111,7 +116,7 @@ class OidcAuthMethod(AuthMethod):
 
         return profile_id, profile.get(self._profile.name_key, profile_id), email, {}
 
-    def __init__(  # noqa: PLR0913, PLR0917
+    def __init__(  # noqa: PLR0913, PLR0917, D107
         self,
         id: str,
         name: str,
@@ -131,33 +136,33 @@ class OidcAuthMethod(AuthMethod):
         self._profile = profile
         self._timeout = timeout
 
-    def get_id(self) -> str:
+    def get_id(self) -> str:  # noqa: D102
         return self._id
 
-    def get_name(self) -> str:
+    def get_name(self) -> str:  # noqa: D102
         return self._name
 
-    def get_imlink(self) -> str:
+    def get_imlink(self) -> str:  # noqa: D102
         return f'<img src="{self._icon_url}">'
 
 
 def init(
     plugin_manager: PluginManager, client: Client, raw_plugin_config: dict[str, Any]
 ):
+    """Initialises the OIDC authentication plugin.
+
+    Args:
+        plugin_manager: The plugin manager instance.
+        client: The client instance.
+        raw_plugin_config: The plugin configuration dictionary.
+    """
     plugin_config = OidcPluginConfig(**raw_plugin_config)
 
     if plugin_config.debug:
         os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
-    oidc_config: dict[str, Any] = requests.get(
-        plugin_config.oidc_config_url, timeout=plugin_config.timeout
-    ).json()
-
-    authorization_endpoint: str = oidc_config["authorization_endpoint"]
-    token_endpoint: str = oidc_config["token_endpoint"]
-    userinfo_endpoint: str = oidc_config["userinfo_endpoint"]
-
     if plugin_config.static_path:
+
         class OidcAuthStatic(INGIniousPage):
             """Serve static files for the OIDC authentication plugin."""
 
@@ -177,19 +182,28 @@ def init(
             OidcAuthStatic.as_view("oidc_auth_static"),
         )
 
-    plugin_manager.register_auth_method(
-        OidcAuthMethod(
-            plugin_config.id,
-            plugin_config.name,
-            plugin_config.client,
-            OidcEndpoints(
-                authorization_url=authorization_endpoint,
-                token_url=token_endpoint,
-                userinfo_url=userinfo_endpoint,
-            ),
-            plugin_config.scope,
-            plugin_config.icon_url,
-            plugin_config.profile,
-            plugin_config.timeout,
+    for provider_id, provider in plugin_config.providers.items():
+        oidc_config: dict[str, Any] = requests.get(
+            provider.oidc_config_url, timeout=plugin_config.timeout
+        ).json()
+
+        authorization_endpoint: str = oidc_config["authorization_endpoint"]
+        token_endpoint: str = oidc_config["token_endpoint"]
+        userinfo_endpoint: str = oidc_config["userinfo_endpoint"]
+
+        plugin_manager.register_auth_method(
+            OidcAuthMethod(
+                provider_id,
+                provider.name,
+                provider.client,
+                OidcEndpoints(
+                    authorization_url=authorization_endpoint,
+                    token_url=token_endpoint,
+                    userinfo_url=userinfo_endpoint,
+                ),
+                provider.scope,
+                provider.icon_url,
+                provider.profile,
+                plugin_config.timeout,
+            )
         )
-    )

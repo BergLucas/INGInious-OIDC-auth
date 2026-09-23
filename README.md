@@ -33,6 +33,23 @@ pip install inginious_regex_short_answer_problem-X.X.X-py3-none-any.whl
 
 (Note: The X.X.X must be replaced by the version that you want to install.)
 
+## Example configuration
+
+Here is an example configuration for the plugin to support Microsoft 365 authentication:
+
+```yaml
+- plugin_module: inginious_oidc_auth
+  providers:
+    microsoft365:
+      name: "Microsoft 365"
+      client:
+        id: "<YOUR_CLIENT_ID>"
+        secret: "<YOUR_CLIENT_SECRET>"
+      oidc_config_url: "https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration"
+      icon_url: "https://learn.microsoft.com/en-us/entra/identity-platform/media/howto-add-branding-in-apps/ms-symbollockup_signin_light.svg"
+      scope: ["openid", "profile"]
+```
+
 ## License
 
 All code is licensed for others under a MIT license (see [LICENSE](https://github.com/BergLucas/INGInious-OIDC-auth/blob/main/LICENSE)).

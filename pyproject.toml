@@ -52,6 +52,7 @@ source = ["src/inginious_oidc_auth", "tests"]
 
 [tool.ruff.lint]
 select = [
+    "D",   # pydocstyle
     "E",   # pycodestyle errors
     "W",   # pycodestyle warnings
     "F",   # pyflakes
