@@ -45,7 +45,7 @@ Here is an example configuration for the plugin to support Microsoft 365 authent
       client:
         id: "<YOUR_CLIENT_ID>"
         secret: "<YOUR_CLIENT_SECRET>"
-      oidc_config_url: "https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration"
+      issuer_url: "https://login.microsoftonline.com/common/v2.0/"
       icon_url: "https://learn.microsoft.com/en-us/entra/identity-platform/media/howto-add-branding-in-apps/ms-symbollockup_signin_light.svg"
       scope: ["openid", "profile"]
 ```

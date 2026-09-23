@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 from typing import TYPE_CHECKING, Any
+from urllib.parse import urljoin
 
 import flask
 import requests
@@ -24,6 +25,14 @@ class OidcClient(BaseModel):
     secret: str
 
 
+class OidcEndpoints(BaseModel):
+    """Endpoints for the OIDC provider."""
+
+    authorization_url: str
+    token_url: str
+    userinfo_url: str
+
+
 class OidcProfile(BaseModel):
     """A OIDC profile."""
 
@@ -37,7 +46,7 @@ class OidcProvider(BaseModel):
 
     name: str
     client: OidcClient
-    oidc_config_url: str
+    issuer_url: str | OidcEndpoints
     icon_url: str
     profile: OidcProfile = OidcProfile()
     scope: list[str] = []
@@ -50,14 +59,6 @@ class OidcPluginConfig(BaseModel):
     static_path: str = ""
     timeout: int = 5
     providers: dict[str, OidcProvider] = {}
-
-
-class OidcEndpoints(BaseModel):
-    """Endpoints for the OIDC provider."""
-
-    authorization_url: str
-    token_url: str
-    userinfo_url: str
 
 
 class OidcAuthMethod(AuthMethod):
@@ -183,20 +184,29 @@ def init(
         )
 
     for provider_id, provider in plugin_config.providers.items():
-        oidc_config: dict[str, Any] = requests.get(
-            provider.oidc_config_url, timeout=plugin_config.timeout
-        ).json()
+        if isinstance(provider.issuer_url, OidcEndpoints):
+            oidc_endpoints = provider.issuer_url
+        else:
+            discovery_url = urljoin(
+                provider.issuer_url,
+                ".well-known/openid-configuration",
+            )
+            openid_config = requests.get(
+                discovery_url,
+                timeout=plugin_config.timeout,
+            ).json()
+            oidc_endpoints = OidcEndpoints(
+                authorization_url=openid_config["authorization_endpoint"],
+                token_url=openid_config["token_endpoint"],
+                userinfo_url=openid_config["userinfo_endpoint"],
+            )
 
         plugin_manager.register_auth_method(
             OidcAuthMethod(
                 provider_id,
                 provider.name,
                 provider.client,
-                OidcEndpoints(
-                    authorization_url=oidc_config["authorization_endpoint"],
-                    token_url=oidc_config["token_endpoint"],
-                    userinfo_url=oidc_config["userinfo_endpoint"],
-                ),
+                oidc_endpoints,
                 provider.scope,
                 provider.icon_url,
                 provider.profile,
