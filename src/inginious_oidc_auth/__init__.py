@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin
@@ -16,6 +17,9 @@ from requests_oauthlib import OAuth2Session
 if TYPE_CHECKING:
     from inginious.client.client import Client
     from inginious.frontend.plugins import PluginManager
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class OidcClient(BaseModel):
@@ -108,9 +112,11 @@ class OidcAuthMethod(AuthMethod):
 
             profile = json.loads(response.content.decode("utf-8"))
         except Exception:
+            LOGGER.exception("Error during OIDC callback")
             return None
 
         if (email := profile.get(self._profile.email_key)) is None:
+            LOGGER.warning("Email not found in OIDC profile: %s", profile)
             return None
 
         profile_id = str(profile[self._profile.id_key])
