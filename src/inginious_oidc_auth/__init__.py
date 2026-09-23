@@ -187,19 +187,15 @@ def init(
             provider.oidc_config_url, timeout=plugin_config.timeout
         ).json()
 
-        authorization_endpoint: str = oidc_config["authorization_endpoint"]
-        token_endpoint: str = oidc_config["token_endpoint"]
-        userinfo_endpoint: str = oidc_config["userinfo_endpoint"]
-
         plugin_manager.register_auth_method(
             OidcAuthMethod(
                 provider_id,
                 provider.name,
                 provider.client,
                 OidcEndpoints(
-                    authorization_url=authorization_endpoint,
-                    token_url=token_endpoint,
-                    userinfo_url=userinfo_endpoint,
+                    authorization_url=oidc_config["authorization_endpoint"],
+                    token_url=oidc_config["token_endpoint"],
+                    userinfo_url=oidc_config["userinfo_endpoint"],
                 ),
                 provider.scope,
                 provider.icon_url,
