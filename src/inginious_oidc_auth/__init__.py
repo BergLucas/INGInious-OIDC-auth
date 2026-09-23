@@ -48,7 +48,7 @@ class OidcPluginConfig(BaseModel):
     client: OidcClient
     oidc_config_url: str
     icon_url: str
-    static_path: str
+    static_path: str = ""
     profile: OidcProfile = OidcProfile()
     scope: list[str] = []
     timeout: int = 5
@@ -157,24 +157,26 @@ def init(
     token_endpoint: str = oidc_config["token_endpoint"]
     userinfo_endpoint: str = oidc_config["userinfo_endpoint"]
 
-    class OidcAuthStatic(INGIniousPage):
-        """Serve static files for the OIDC authentication plugin."""
+    if plugin_config.static_path:
+        class OidcAuthStatic(INGIniousPage):
+            """Serve static files for the OIDC authentication plugin."""
 
-        def GET(self, path: str) -> Response:  # noqa: N802
-            """Serve static files for the OIDC authentication plugin.
+            def GET(self, path: str) -> Response:  # noqa: N802
+                """Serve static files for the OIDC authentication plugin.
 
-            Args:
-                path: The path to the static file.
+                Args:
+                    path: The path to the static file.
 
-            Returns:
-                The static file.
-            """
-            return send_from_directory(plugin_config.static_path, path)
+                Returns:
+                    The static file.
+                """
+                return send_from_directory(plugin_config.static_path, path)
 
-    plugin_manager.add_page(
-        "/plugins/oidc-auth/static/<path:path>",
-        OidcAuthStatic.as_view("oidc_auth_static"),
-    )
+        plugin_manager.add_page(
+            "/plugins/oidc-auth/static/<path:path>",
+            OidcAuthStatic.as_view("oidc_auth_static"),
+        )
+
     plugin_manager.register_auth_method(
         OidcAuthMethod(
             plugin_config.id,
