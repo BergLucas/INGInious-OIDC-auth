@@ -63,13 +63,13 @@ class OidcAuthMethod(AuthMethod):
         return flask.request.url_root + "auth/callback/" + self._id
 
     def get_auth_link(self, auth_storage: dict[str, Any]) -> str:
-        microsoft = OAuth2Session(
+        session = OAuth2Session(
             self._client.id,
             scope=self._scope,
             redirect_uri=self._redirect_uri,
         )
 
-        authorization_url, state = microsoft.authorization_url(
+        authorization_url, state = session.authorization_url(
             self._endpoints.authorization_url,
         )
 
@@ -80,7 +80,7 @@ class OidcAuthMethod(AuthMethod):
     def callback(
         self, auth_storage: dict[str, Any]
     ) -> tuple[str, str, str, dict] | None:
-        microsoft = OAuth2Session(
+        session = OAuth2Session(
             self._client.id,
             state=auth_storage["oauth_state"],
             scope=self._scope,
@@ -88,14 +88,14 @@ class OidcAuthMethod(AuthMethod):
         )
 
         try:
-            microsoft.fetch_token(
+            session.fetch_token(
                 self._endpoints.token_url,
                 client_secret=self._client.secret,
                 authorization_response=flask.request.url,
                 timeout=self._timeout,
             )
 
-            response = microsoft.get(
+            response = session.get(
                 self._endpoints.userinfo_url,
                 timeout=self._timeout,
             )
